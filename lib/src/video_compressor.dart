@@ -21,9 +21,11 @@ class VideoCompress {
     return _instance;
   }
 
-  StreamController<double> _progressController;
+  static StreamController<double> _progressController = StreamController.broadcast(onListen: () {
+    _hasProgressListeners = true;
+  });
 
-  Stream<double> get compressProgress$ => _progressController.stream;
+  static Stream<double> get compressProgress$ => _progressController.stream;
 
   static bool _hasProgressListeners = false;
 
@@ -37,10 +39,6 @@ class VideoCompress {
 
 
   VideoCompress._() {
-    _progressController = StreamController.broadcast(onListen: () {
-      _hasProgressListeners = true;
-    });
-
     _channel.setMethodCallHandler(_progressCallback);
   }
 
