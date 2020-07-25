@@ -9,36 +9,48 @@ import 'package:flutter/services.dart';
 import 'media_info.dart';
 
 class VideoCompress {
+
+  static const _channel = const MethodChannel('video_compress');
+
   static VideoCompress _instance;
+
+  static VideoCompress get instance => _instance ?? VideoCompress();
 
   factory VideoCompress() {
     if (_instance == null) _instance = VideoCompress._();
     return _instance;
   }
 
-  VideoCompress._() {
-    _channel.setMethodCallHandler(_progresCallback);
-  }
+  static StreamController<double> _progressController = StreamController.broadcast(onListen: () {
+    _hasProgressListeners = true;
+  });
 
-  static const _channel = const MethodChannel('video_compress');
+  static Stream<double> get compressProgress$ => _progressController.stream;
 
-  /// Check compress state
+  static bool _hasProgressListeners = false;
+
+  ///
+  /// Flag to check compression state
+  ///
+  static bool _isCompressing = false;
   static bool get isCompressing => _isCompressing;
 
-  static bool _isCompressing = false;
 
-  Future<void> _progresCallback(MethodCall call) async {
+
+
+  VideoCompress._() {
+    _channel.setMethodCallHandler(_progressCallback);
+  }
+
+
+  Future<void> _progressCallback(MethodCall call) async {
     switch (call.method) {
       case 'updateProgress':
         final progress = double.tryParse(call.arguments.toString());
-        if (progress != null) compressProgress$.next(progress);
+        if (progress != null) _progressController.add(progress);
         break;
     }
   }
-
-  /// Subscribe the compress progress
-  static ObservableBuilder<double> compressProgress$ =
-      ObservableBuilder<double>();
 
   static Future<T> _invoke<T>(String name,
       [Map<String, dynamic> params]) async {
@@ -142,7 +154,7 @@ class VideoCompress {
       Already have a compression process, you need to wait for the process to finish or stop it''');
     }
     _isCompressing = true;
-    if (compressProgress$.notSubscribed) {
+    if (!_hasProgressListeners) {
       debugPrint('''VideoCompress: You can try to subscribe to the 
       compressProgress\$ stream to know the compressing state.''');
     }
